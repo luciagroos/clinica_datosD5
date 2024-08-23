@@ -1,0 +1,21 @@
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+library(readr)
+library(haven)
+library(tidyverse)
+library(sf)
+library(geoAr)
+library(geofacet)
+library(ggmap)
+library(tables)
+```
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+rm(list=ls())	
+```
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+
+emisiones_arg_mundo <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_arg_mundo.csv")
+
+emisiones_prov <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_prov_2010_2018.csv")
+```
