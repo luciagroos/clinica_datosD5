@@ -10,12 +10,120 @@ library(tables)
 ```
 
 ```{r, warning=FALSE, cache=FALSE, message=FALSE}
-rm(list=ls())	
-```
-
-```{r, warning=FALSE, cache=FALSE, message=FALSE}
 
 emisiones_arg_mundo <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_arg_mundo.csv")
 
-emisiones_prov <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_prov_2010_2018.csv")
+emisiones_prov <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_prov_2010_2018_2.txt")
+
+emisiones_prov_2018 <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_vab_provincias.csv")
+
+emisiones_anuales_paises <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_anuales_co2_region_2021.csv")
+
+provincias <- read_sf("C:/Users/josef/Downloads/Clinica de datos/provincias/ProvinciasArgentina.geojson")
+
 ```
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+emisiones_paises_filtrado <- filter(emisiones_anuales_paises, valor_en_porcent>0.003)
+```
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+emisiones_paises_filtrado <- emisiones_paises_filtrado %>% 
+mutate(arg= case_when(
+  ((iso3_desc_fundar == "Argentina")) ~ 'SI',
+  ((iso3_desc_fundar != "Argentina")) ~ 'NO'))
+
+```
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+ggplot(data = emisiones_paises_filtrado) +
+geom_bar(aes(y=reorder(iso3_desc_fundar, valor_en_porcent), fill=arg, weight=valor_en_porcent)) +
+  ggtitle("Comparativa procentual de emisiones por pais. Año 2022") +
+  labs(y="Pais") +
+  scale_fill_manual(values=c('#fecc5c','#bd0026'))
+```
+
+
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+ggplot(data = emisiones_arg_mundo ) +
+geom_bar(aes(x=region, fill=sector, weight=valor_en_porcent)) +
+  ggtitle("Comparativa emisiones por sector. Argentina y Mundo. Año=") +
+  labs(x= "Sector",  y="Emisiones") +
+  scale_fill_manual(values=c('#fecc5c','#fd8d3c','#f03b20','#bd0026'))
+
+```
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+ggplot(data = emisiones_prov) +
+geom_bar(aes(y=reorder(provincia,valor_en_mtco2e), fill=sector, weight=valor_en_mtco2e)) +
+  ggtitle("Comparativa emisiones por sector. Provincias Argentina. Año 2010-2018") +
+  labs(x= "Sector",  y="Emisiones") +
+  scale_fill_manual(values=c('#fecc5c','#fd8d3c','#f03b20','#bd0026'))
+```
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+(arg_grid <- geoAr::get_grid(district = "ARGENTINA"))
+```
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+geofacet::grid_preview(arg_grid)
+```
+
+```{r, warning=FALSE, cache=FALSE, message=FALSE}
+emisiones_prov_grid <- left_join(emisiones_prov, arg_grid, by="code")
+```
+
+```{r}
+ggplot(emisiones_prov_grid) +
+  geom_bar(aes(x=sector, weight=valor_en_mtco2e, fill=sector)) +
+  coord_flip() +
+  theme_bw() +
+  labs(fill="Sector") +
+  scale_fill_manual(values=c('#fecc5c','#fd8d3c','#f03b20','#bd0026'))
+```
+```{r fig.height=10, fig.width=7}
+ggplot(emisiones_prov_grid) +
+  geom_bar(aes(x=sector, weight=valor_en_mtco2e, fill=sector)) +
+  coord_flip() +
+  theme_bw() +
+  labs(fill="Sector") +
+  scale_fill_manual(values=c('#fecc5c','#fd8d3c','#f03b20','#bd0026')) +
+  facet_geo(~ "code", grid = arg_grid, label = "name") +
+  ggtitle("Emisiones por sector por provincia") +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank())+
+  theme(axis.text.x = element_text(angle = 90))
+```
+```{r}
+emisiones_prov_geo <- left_join(emisiones_prov_2018, provincias,  by=c("provincia" = "nombre"))
+```
+
+```{r}
+ggplot()+
+  geom_sf(data=emisiones_prov_geo, aes(fill=valor_en_mtco2e_per_cap, geometry=geometry)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) +
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)
+```
+```{r}
+emisiones_prov_2018_total <- filter(emisiones_prov, anio == "2018") 
+```
+
+```{r}
+emisiones_2018_total <- emisiones_prov_2018_total %>% 
+  group_by(provincia) %>% 
+  summarise(valor_en_mtco2e = sum(valor_en_mtco2e)) %>%
+  arrange(provincia)
+```
+
+```{r}
+emisiones_total_prov_geo <- left_join(emisiones_2018_total, provincias,  by=c("provincia" = "nombre"))
+```
+
+```{r}
+ggplot()+
+  geom_sf(data=emisiones_total_prov_geo, aes(fill=valor_en_mtco2e, geometry=geometry)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) +
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)
+```
+
