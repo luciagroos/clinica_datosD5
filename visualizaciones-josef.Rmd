@@ -7,6 +7,7 @@ library(geoAr)
 library(geofacet)
 library(ggmap)
 library(tables)
+library(ggplot2)
 ```
 
 ```{r, warning=FALSE, cache=FALSE, message=FALSE}
@@ -20,6 +21,10 @@ emisiones_prov_2018 <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de dat
 emisiones_anuales_paises <- read_csv(file =  "C:/Users/josef/Downloads/Clinica de datos/Desafío 5  Cambio climático y emisiones de GEI-20240822/emisiones_anuales_co2_region_2021.csv")
 
 provincias <- read_sf("C:/Users/josef/Downloads/Clinica de datos/provincias/ProvinciasArgentina.geojson")
+
+pbi_prov <- read_sf("C:/Users/josef/Downloads/Clinica de datos/vab_por_provincia.csv")
+
+emisiones_prov_traspose <- read_sf("C:/Users/josef/Downloads/Clinica de datos/drive-download-20240822T211727Z-001/emisiones_prov_2010_2018_2 mod.csv")
 
 ```
 
@@ -48,9 +53,10 @@ geom_bar(aes(y=reorder(iso3_desc_fundar, valor_en_porcent), fill=arg, weight=val
 ```{r, warning=FALSE, cache=FALSE, message=FALSE}
 ggplot(data = emisiones_arg_mundo ) +
 geom_bar(aes(x=region, fill=sector, weight=valor_en_porcent)) +
-  ggtitle("Comparativa emisiones por sector. Argentina y Mundo. Año=") +
+  ggtitle("Comparativa emisiones por sector. Argentina y Mundo") +
   labs(x= "Sector",  y="Emisiones") +
-  scale_fill_manual(values=c('#fecc5c','#fd8d3c','#f03b20','#bd0026'))
+  scale_fill_manual(values=c('#fecc5c','#fd8d3c','#f03b20','#bd0026'))+
+ labs(fill="valor_en_porcent") 
 
 ```
 ```{r, warning=FALSE, cache=FALSE, message=FALSE}
@@ -127,3 +133,72 @@ ggplot()+
   scale_fill_distiller(palette = "YlOrRd", direction = 1)
 ```
 
+```{r}
+emisiones_prov_traspose <- emisiones_prov_traspose  %>% 
+  mutate(anio=as.numeric(anio)) %>% 
+  mutate(Energía=as.numeric(Energía))%>% 
+  mutate(PIUP=as.numeric(PIUP))%>% 
+  mutate(AGSyOUT=as.numeric(AGSyOUT))%>% 
+  mutate(Residuos=as.numeric(Residuos))
+```
+
+```{r}
+pbi_total_prov <- pbi_prov  %>% 
+  mutate(vab_pb=as.numeric(vab_pb)) %>%
+  mutate(anio=as.numeric(anio))
+```
+
+```{r}
+pbi_total_anio <- pbi_total_prov  %>%
+  group_by(anio) %>% 
+  summarise(vab_pb = sum(vab_pb)) %>%
+  filter(anio >= "2010") %>%
+  filter(anio <= "2018") %>%
+  arrange(anio)
+```
+
+```{r}
+emisiones_prov_traspose <- left_join(emisiones_prov_traspose, pbi_total_anio,  by="anio")
+```
+
+```{r}
+ggplot(emisiones_prov_traspose, aes(x = anio, y=vab_pb)) +
+geom_line(col='#838b8b', size=1)+
+  geom_point(col='#838b8b',size=2)+
+scale_y_continuous(name = "PBI", limits = c(500000,650000)) +
+ggtitle("Evolucion de PBI. Argentina. Años 2010-2018")
+```
+
+```{r}
+ggplot(sectores_emisiones_prov, aes(x = anio, y=valor_en_mtco2e, color=sector)) +
+  geom_line()+
+  geom_point()+
+scale_y_continuous(name = "Emisiones") +
+ggtitle("Evolucion emisiones por sector. Argentina. Años 2010-2018")+ 
+facet_wrap(~sector)+
+scale_color_manual(values=c('#fecc5c','#fd8d3c','#f03b20','#bd0026')) 
+```
+
+```{r}
+X <- filter(sectores_emisiones_prov, sector==c("Energía","AGSyOUT"))
+```
+
+```{r fig.height=3, fig.width=8}
+ggplot(filter(sectores_emisiones_prov, sector %in% c("Energía","AGSyOUT")), aes(x = anio, y=valor_en_mtco2e, color=sector)) +
+  geom_line()+
+  geom_point()+
+scale_y_continuous(name = "Emisiones") +
+ggtitle("Evolucion emisiones por sector. Argentina. Años 2010-2018")+ 
+facet_wrap(~sector)+
+scale_color_manual(values=c('#fecc5c','#fd8d3c')) 
+```
+
+```{r fig.height=3, fig.width=8}
+ggplot(filter(sectores_emisiones_prov, sector %in% c("PIUP","Residuos")), aes(x = anio, y=valor_en_mtco2e, color=sector)) +
+  geom_line()+
+  geom_point()+
+scale_y_continuous(name = "Emisiones") +
+ggtitle("Evolucion emisiones por sector. Argentina. Años 2010-2018")+ 
+facet_wrap(~sector)+
+scale_color_manual(values=c('#f03b20','#bd0026')) 
+```
